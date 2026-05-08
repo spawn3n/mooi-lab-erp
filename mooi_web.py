@@ -1,54 +1,57 @@
 import streamlit as st
 import pandas as pd
-from streamlit_gsheets import GSheetsConnection
 
 # Sayfa Ayarları
-st.set_page_config(page_title="Mooi Lab Cloud", page_icon="🧪")
+st.set_page_config(page_title="Mooi Lab Cloud", page_icon="🧪", layout="centered")
 
-# Senin Google Sheet Linkin (Sadeleştirilmiş hali)
-URL = "https://docs.google.com/spreadsheets/d/1gRSbiYEBftt19clNs6KoJYVlr6wSl70_J9sX7B_w07s/edit"
+# --- BAĞLANTI AYARLARI ---
+# Senin Excel tablo kimliğin (Linkinden aldım)
+SHEET_ID = "1gRSbiYEBftt19clNs6KoJYVlr6wSl70_J9sX7B_w07s"
+# Doğrudan CSV formatında okuma linki (En sorunsuz yöntem budur)
+CSV_URL = f"https://docs.google.com/spreadsheets/d/{SHEET_ID}/export?format=csv&gid=0"
 
-# Başlık
 st.title("🧪 Mooi Laboratory Cloud")
+st.markdown("---")
 
-# Bağlantı Kurma
-conn = st.connection("gsheets", type=GSheetsConnection)
+# Veriyi Çekme Fonksiyonu
+def verileri_getir():
+    try:
+        # Cache (önbellek) sorunlarını önlemek için linkin sonuna rastgele sayı ekliyoruz
+        url = f"{CSV_URL}&cache={pd.Timestamp.now().timestamp()}"
+        df = pd.read_csv(url)
+        return df
+    except Exception as e:
+        st.error(f"Bağlantı Hatası: {e}")
+        return pd.DataFrame(columns=["Formul_Adi", "Icerik"])
 
-# Veriyi Oku
-try:
-    # Doğrudan URL ve sekme ismini veriyoruz
-    df = conn.read(spreadsheet=URL, worksheet="Formuller", ttl=0, header=0)
-except Exception as e:
-    st.error("⚠️ Bağlantı kurulamadı!")
-    st.info(f"Hata Detayı: {e}")
-    df = pd.DataFrame(columns=["Formul_Adi", "Icerik"])
+# Verileri çek
+data = verileri_getir()
 
-# Menü Yapısı
-menu = st.sidebar.selectbox("İşlem Seçin", ["Formülleri Listele", "Yeni Formül Ekle"])
+# --- YAN MENÜ ---
+menu = st.sidebar.radio("İşlem Seçin", ["📚 Reçeteleri Gör", "➕ Yeni Formül Ekle"])
 
-if menu == "Formülleri Listele":
-    st.subheader("📚 Kayıtlı Reçeteler")
-    if not df.empty:
-        st.dataframe(df, use_container_width=True)
+if menu == "📚 Reçeteleri Gör":
+    st.subheader("Kayıtlı Formüller")
+    if not data.empty:
+        # Tabloyu daha şık gösterelim
+        for index, row in data.iterrows():
+            with st.expander(f"🔹 {row['Formul_Adi']}"):
+                st.write(f"**İçerik:** {row['Icerik']}")
     else:
-        st.warning("Henüz kayıtlı formül bulunamadı. Lütfen yeni bir tane ekleyin.")
+        st.info("Henüz kayıtlı formül bulunamadı.")
 
-elif menu == "Yeni Formül Ekle":
-    st.subheader("➕ Yeni Kayıt")
-    with st.form("yeni_formul_formu"):
-        ad = st.text_input("Formül Adı")
-        icerik = st.text_area("İçerik (Hammadde ve Miktarlar)")
-        submit = st.form_submit_button("Buluta Kaydet")
-        
-        if submit:
-            if ad and icerik:
-                # Mevcut veriye yeni satırı ekle
-                yeni_satir = pd.DataFrame([{"Formul_Adi": ad, "Icerik": icerik}])
-                guncel_df = pd.concat([df, yeni_satir], ignore_index=True)
-                
-                # Google Sheets'e Yaz (Güncelle)
-                conn.update(spreadsheet=URL, worksheet="Formuller", data=guncel_df)
-                st.success(f"'{ad}' başarıyla kaydedildi!")
-                st.balloons()
-            else:
-                st.warning("Lütfen tüm alanları doldurun.")
+elif menu == "➕ Yeni Formül Ekle":
+    st.subheader("Yeni Formül Kaydı")
+    st.info("Şefim, güvenliğiniz için yazma işlemini doğrudan Google Sheets üzerinden yapıyoruz.")
+    
+    # Doğrudan Google Sheets'e yönlendiren şık bir buton
+    tablo_linki = f"https://docs.google.com/spreadsheets/d/{SHEET_ID}/edit"
+    st.link_button("🚀 Google Sheets'i Aç ve Formül Ekle", tablo_linki)
+    
+    st.write("")
+    st.write("---")
+    st.caption("Not: Google Sheets'e eklediğiniz formüller, sayfayı yenilediğinizde burada görünecektir.")
+
+# Sayfa Alt Bilgisi
+st.sidebar.markdown("---")
+st.sidebar.caption("Mooi Laboratory v1.5")
