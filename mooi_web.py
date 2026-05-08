@@ -4,36 +4,39 @@ import pandas as pd
 
 st.set_page_config(page_title="Mooi Lab Cloud", page_icon="🧪")
 
-# Bağlantı
+# Bağlantıyı kur (Secrets'tan çeker)
 conn = st.connection("gsheets", type=GSheetsConnection)
-
-# Veriyi oku
-try:
-    # ttl=0 yaparak her seferinde en güncel veriyi çekmesini sağlıyoruz
-    df = conn.read(spreadsheet=st.secrets["connections"]["gsheets"]["spreadsheet"], worksheet="Formuller", ttl=0)
-except Exception as e:
-    st.error(f"Bağlantı Kurulamadı! Lütfen E-Tablo sekme isminin 'Formuller' olduğundan emin olun.")
-    df = pd.DataFrame(columns=["Formul_Adi", "Icerik"])
 
 st.title("🧪 Mooi Laboratory Cloud")
 
-# Menü
-menu = st.sidebar.selectbox("Menü", ["Formülleri Gör", "Yeni Ekle"])
+try:
+    # Veriyi çekmeye çalış
+    df = conn.read(worksheet="Formuller", ttl=5)
+    
+    # Menü tasarımı
+    menu = st.sidebar.selectbox("İşlem", ["Listele", "Yeni Ekle"])
 
-if menu == "Formülleri Gör":
-    if not df.empty:
-        st.dataframe(df, use_container_width=True)
-    else:
-        st.warning("Tablo şu an boş. Lütfen yeni bir formül ekleyin.")
+    if menu == "Listele":
+        st.subheader("📚 Kayıtlı Formüller")
+        if not df.empty:
+            st.dataframe(df, use_container_width=True)
+        else:
+            st.info("Tablo şu an boş, ilk formülü eklemeye ne dersin?")
 
-elif menu == "Yeni Ekle":
-    with st.form("ekle_form"):
-        ad = st.text_input("Formül Adı")
-        icerik = st.text_area("İçerik")
-        gonder = st.form_submit_button("Buluta Yaz")
-        
-        if gonder and ad and icerik:
-            yeni_veri = pd.DataFrame([{"Formul_Adi": ad, "Icerik": icerik}])
-            guncel_df = pd.concat([df, yeni_veri], ignore_index=True)
-            conn.update(spreadsheet=st.secrets["connections"]["gsheets"]["spreadsheet"], worksheet="Formuller", data=guncel_df)
-            st.success("Başarıyla kaydedildi! 'Formülleri Gör' sekmesine bakabilirsiniz.")
+    elif menu == "Yeni Ekle":
+        st.subheader("➕ Yeni Reçete")
+        with st.form("ekle"):
+            ad = st.text_input("Formül Adı")
+            detay = st.text_area("İçerik")
+            gonder = st.form_submit_button("Buluta Gönder")
+            
+            if gonder and ad:
+                yeni = pd.DataFrame([{"Formul_Adi": ad, "Icerik": detay}])
+                df = pd.concat([df, yeni], ignore_index=True)
+                conn.update(worksheet="Formuller", data=df)
+                st.success("Kaydedildi! Sayfayı yenileyebilirsiniz.")
+
+except Exception as e:
+    st.error("⚠️ Bağlantı Hatası Detayı:")
+    st.code(str(e))
+    st.info("İpucu: Google Sheets sekme isminin 'Formuller' olduğundan ve Paylaşım ayarının 'Düzenleyici' olduğundan emin olun.")
