@@ -11,7 +11,7 @@ st.title("🧪 Mooi Laboratory Cloud")
 
 try:
     # Veriyi çekmeye çalış
-    df = conn.read(worksheet="Formuller", ttl=5)
+    df = conn.read(spreadsheet=url, worksheet="Formuller")
     
     # Menü tasarımı
     menu = st.sidebar.selectbox("İşlem", ["Listele", "Yeni Ekle"])
