@@ -11,6 +11,7 @@ st.title("🧪 Mooi Laboratory Cloud")
 
 try:
     # Veriyi çekmeye çalış
+    url = "https://docs.google.com/spreadsheets/d/1gRSbiYEBftt19clNs6KoJYVlr6wSl70_J9sX7B_w07s/edit"
     df = conn.read(spreadsheet=url, worksheet="Formuller")
     
     # Menü tasarımı
