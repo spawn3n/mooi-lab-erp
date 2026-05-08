@@ -17,7 +17,7 @@ conn = st.connection("gsheets", type=GSheetsConnection)
 # Veriyi Oku
 try:
     # Doğrudan URL ve sekme ismini veriyoruz
-    df = conn.read(spreadsheet=URL, worksheet="Formuller", ttl=0)
+    df = conn.read(spreadsheet=URL, worksheet="Formuller", ttl=0, header=0)
 except Exception as e:
     st.error("⚠️ Bağlantı kurulamadı!")
     st.info(f"Hata Detayı: {e}")
