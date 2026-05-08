@@ -1,41 +1,50 @@
 import streamlit as st
-import pandas as pd
 from streamlit_gsheets import GSheetsConnection
+import pandas as pd
 
 # Sayfa Ayarları
-st.set_page_config(page_title="Mooi Lab Cloud", page_icon="🧪")
+st.set_page_config(page_title="Mooi Lab Cloud", page_icon="🧪", layout="wide")
 
 st.title("🧪 Mooi Laboratory Cloud")
+st.write("Verileriniz Google Sheets üzerinden anlık senkronize ediliyor.")
 
 # Google Sheets Bağlantısı
 conn = st.connection("gsheets", type=GSheetsConnection)
 
-# Verileri Google'dan Çek
-url = "BURAYA_KOPYALADIGIN_GOOGLE_SHEETS_LINKINI_YAPISTIR"
-data = conn.read(spreadsheet=url, worksheet="Formuller")
+# Verileri Google Sheets'ten Çek
+# (Secrets içindeki linki kullanır)
+try:
+    df = conn.read(worksheet="Formuller")
+except Exception as e:
+    st.error("Veri okuma hatası! Lütfen Secrets içindeki linki ve sayfa adını kontrol edin.")
+    df = pd.DataFrame(columns=["Formul_Adi", "Icerik"])
 
-# --- MENÜ ---
-menu = ["Formülleri Gör", "Yeni Formül Ekle"]
-secim = st.sidebar.selectbox("İşlem Seçin", menu)
+# --- YAN MENÜ ---
+menu = st.sidebar.radio("İşlem Seçin", ["Formülleri Listele", "Yeni Formül Ekle"])
 
-if secim == "Formülleri Gör":
-    st.subheader("📚 Kayıtlı Reçeteler")
-    st.dataframe(data)
+if menu == "Formülleri Listele":
+    st.header("📚 Kayıtlı Reçeteler")
+    if not df.empty:
+        st.dataframe(df, use_container_width=True)
+    else:
+        st.info("Henüz kayıtlı formül bulunmuyor.")
 
-elif secim == "Yeni Formül Ekle":
-    st.subheader("➕ Yeni Kayıt")
-    with st.form("kayit_formu"):
-        yeni_ad = st.text_input("Formül Adı")
-        yeni_icerik = st.text_area("İçerik (Hammadde: Miktar)")
-        submit = st.form_submit_button("Buluta Gönder")
-
+elif menu == "Yeni Formül Ekle":
+    st.header("➕ Yeni Kayıt Oluştur")
+    with st.form("yeni_kayit"):
+        ad = st.text_input("Formül/Ürün Adı")
+        icerik = st.text_area("İçerik Detayları (Örn: Su %70, Yağ %30)")
+        submit = st.form_submit_button("Buluta Kaydet")
+        
         if submit:
-            if yeni_ad and yeni_icerik:
-                # Mevcut veriye ekle
-                yeni_satir = pd.DataFrame([{"Formul_Adi": yeni_ad, "Icerik": yeni_icerik}])
-                updated_df = pd.concat([data, yeni_satir], ignore_index=True)
-                
-                # Google Sheets'e Yaz
-                conn.update(spreadsheet=url, worksheet="Formuller", data=updated_df)
-                st.success("Veri Google Sheets'e işlendi! Sayfayı yenileyebilirsiniz.")
+            if ad and icerik:
+                # Yeni veriyi hazırla
+                yeni_satir = pd.DataFrame([{"Formul_Adi": ad, "Icerik": icerik}])
+                # Mevcut verinin altına ekle
+                updated_df = pd.concat([df, yeni_satir], ignore_index=True)
+                # Google Sheets'i Güncelle
+                conn.update(worksheet="Formuller", data=updated_df)
+                st.success(f"'{ad}' başarıyla Google Sheets'e kaydedildi!")
                 st.balloons()
+            else:
+                st.warning("Lütfen tüm alanları doldurun.")
